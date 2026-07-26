@@ -11,6 +11,14 @@ A simple weather application built with **React** and the **Open-Meteo API**. Us
 * ⏳ Loading indicator
 * ❌ Error handling for invalid cities or API failures
 
+## Preview
+
+### App UI
+![App UI](src/assets/AppUI.png)
+
+### Search Result
+![Weather Response](src/assets/Response.png)
+
 ## Technologies Used
 
 * React
@@ -22,7 +30,7 @@ A simple weather application built with **React** and the **Open-Meteo API**. Us
 ## Run Locally
 
 ```bash
-git clone https://github.com/leosum1t/weather-app.git
+git clone https://github.com//weather-app.git
 cd weather-app
 npm install
 npm run dev
