@@ -161,7 +161,7 @@ function App() {
             </h2>
 
             {/* Temperature Card */}
-            <div className="mx-auto mt-8 flex w-full max-w-sm overflow-hidden rounded-xl border-2 border-sky-300 bg-white shadow-sm">
+            <div className="mx-auto mt-8 flex w-full max-w-sm overflow-hidden rounded-xl border-2 border-sky-300 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
               <div className="flex flex-1 items-center justify-center gap-2 border-r-2 border-sky-200 px-5 py-5 font-semibold text-slate-700">
                 <i className="fa-solid fa-temperature-three-quarters text-lg text-sky-600"></i>
                 <span>Temperature</span>
@@ -182,7 +182,7 @@ function App() {
               />
 
               <WeatherCard
-                icon={<i className="fa-solid fa-cloud text-sky-600"></i>}
+                icon={<i className="fa-solid fa-cloud-sun"></i>}
                 label="Weather"
                 value={weather.condition}
               />
