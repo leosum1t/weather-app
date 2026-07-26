@@ -81,7 +81,7 @@ function App() {
       setWeather({
         city: location.name,
         country: location.country,
-        temperature: Math.round(weatherData.current.temperature_2m),
+       temperature: weatherData.current.temperature_2m,
         humidity: weatherData.current.relative_humidity_2m,
         condition: getWeatherCondition(weatherData.current.weather_code),
         windSpeed: weatherData.current.wind_speed_10m,
