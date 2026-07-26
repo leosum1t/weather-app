@@ -30,7 +30,7 @@ A simple weather application built with **React** and the **Open-Meteo API**. Us
 ## Run Locally
 
 ```bash
-git clone https://github.com//weather-app.git
+git clone https://github.com/leosum1t/weather-app.git
 cd weather-app
 npm install
 npm run dev
