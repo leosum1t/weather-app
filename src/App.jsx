@@ -5,6 +5,9 @@ function App() {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
 
   const getWeatherCondition = (code) => {
     const weatherCodes = {
@@ -41,33 +44,81 @@ function App() {
     return weatherCodes[code] || "Unknown";
   };
 
-  const fetchWeather = async (cityName) => {
-    if (!cityName.trim()) {
+    useEffect(() => {
+    const keyword = city.trim();
+
+    if (keyword.length < 2 || selectedLocation) {
+      setSuggestions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      setSuggestionLoading(true);
+
+      try {
+        const response = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+            keyword
+          )}&count=10&language=en&format=json`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          setSuggestions([]);
+          return;
+        }
+
+        const data = await response.json();
+        setSuggestions(data.results || []);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setSuggestions([]);
+        }
+      } finally {
+        setSuggestionLoading(false);
+      }
+  }, 400);
+
+  return () => {
+    clearTimeout(timer);
+    controller.abort();
+  };
+  }, [city, selectedLocation]);
+
+  const fetchWeather = async () => {
+     if (!city.trim()) {
       setError("Please enter a city name.");
       return;
     }
 
     setLoading(true);
     setError("");
+    setSuggestions([]);
 
     try {
-      const locationResponse = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          cityName
-        )}&count=1&language=en&format=json`
-      );
+      let location = selectedLocation;
 
-      if (!locationResponse.ok) {
-        throw new Error("Unable to search for the city.");
+      if (!location) {
+        const locationResponse = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+            city.trim()
+          )}&count=1&language=en&format=json`
+        );
+
+        if (!locationResponse.ok) {
+          throw new Error("Unable to search for the city.");
+        }
+
+        const locationData = await locationResponse.json();
+
+        if (!locationData.results || locationData.results.length === 0) {
+          throw new Error("City not found. Please try another city.");
+        }
+
+        location = locationData.results[0];
       }
-
-      const locationData = await locationResponse.json();
-
-      if (!locationData.results || locationData.results.length === 0) {
-        throw new Error("City not found. Please try another city.");
-      }
-
-      const location = locationData.results[0];
 
       const weatherResponse = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
@@ -81,7 +132,8 @@ function App() {
       setWeather({
         city: location.name,
         country: location.country,
-       temperature: weatherData.current.temperature_2m,
+        area: location.admin2,
+        temperature: weatherData.current.temperature_2m,
         humidity: weatherData.current.relative_humidity_2m,
         condition: getWeatherCondition(weatherData.current.weather_code),
         windSpeed: weatherData.current.wind_speed_10m,
@@ -99,8 +151,25 @@ function App() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    fetchWeather(city);
+    fetchWeather();
   };
+
+  const handleCityChange = (event) => {
+  setCity(event.target.value);
+  setSelectedLocation(null);
+  setError("");
+};
+
+const handleSuggestionClick = (place) => {
+  const locationName = [place.name, place.admin2, place.country]
+    .filter(Boolean)
+    .join(", ");
+
+  setCity(locationName);
+  setSelectedLocation(place);
+  setSuggestions([]);
+  setError("");
+};
 
   return (
     <main className="min-h-screen bg-sky-50 px-5 py-10 text-slate-800">
@@ -115,17 +184,46 @@ function App() {
         {/* Search Form */}
         <form
           onSubmit={handleSubmit}
-          className="mx-auto flex w-full max-w-3xl flex-col gap-3 sm:flex-row"
-        >
-          <div className="flex flex-1 items-center border-2 border-sky-300 bg-white px-4 transition focus-within:border-sky-500 focus-within:ring-4 focus-within:ring-sky-100">
-            <input
-              type="text"
-              value={city}
-              onChange={(event) => setCity(event.target.value)}
-              placeholder="Search city..."
-              className="w-full bg-transparent py-3.5 text-slate-700 outline-none placeholder:text-slate-400"
-            />
+          className="mx-auto flex w-full max-w-3xl flex-col gap-3 sm:flex-row">
+            
+        <div className="relative flex-1">
+        <div className="flex w-full items-center border-2 border-sky-300 bg-white px-4 transition focus-within:border-sky-500 focus-within:ring-4 focus-within:ring-sky-100">
+          <input
+            type="text"
+            value={city}
+            onChange={handleCityChange}
+            placeholder="Search city..."
+            autoComplete="off"
+            className="w-full bg-transparent py-3.5 text-slate-700 outline-none placeholder:text-slate-400"
+          />
+        </div>
+
+        {suggestions.length > 0 && (
+          <div className="absolute left-0 top-full z-20 mt-1 max-h-72 w-full overflow-y-auto border border-sky-200 bg-white shadow-lg">
+            {suggestions.map((place) => (
+              <button
+                key={`${place.id}-${place.latitude}-${place.longitude}`}
+                type="button"
+                onClick={() => handleSuggestionClick(place)}
+                className="block w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-sky-50"
+              >
+                <p className="font-semibold text-slate-700">{place.name}</p>
+                <p className="text-sm text-slate-500">
+                  {[place.admin2, place.country]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              </button>
+            ))}
           </div>
+        )}
+
+  {suggestionLoading && city.trim().length >= 2 && (
+    <p className="absolute left-0 top-full mt-2 text-sm text-slate-500">
+      Finding cities...
+    </p>
+  )}
+</div>
 
           <button
             type="submit"
@@ -157,7 +255,9 @@ function App() {
             {/* Location */}
             <h2 className="flex items-center justify-center gap-2 text-center text-xl font-semibold text-slate-800 md:text-2xl">
               <i className="fa-solid fa-location-dot text-sky-600"></i>
-              {weather.city}, {weather.country}
+              {[weather.city, weather.area, weather.country]
+              .filter(Boolean)
+              .join(", ")}
             </h2>
 
             {/* Temperature Card */}
